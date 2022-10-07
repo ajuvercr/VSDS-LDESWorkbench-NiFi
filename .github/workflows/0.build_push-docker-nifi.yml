@@ -1,4 +1,4 @@
-name: 0.build-push-docker-nifi
+name: 0.build_push-docker-nifi
 
 on:
   pull_request:
