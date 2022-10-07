@@ -5,12 +5,10 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFParserBuilder;
 
+import be.vlaanderen.informatievlaanderen.ldes.client.converters.ModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.processors.valueobjects.MemberInfo;
 
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,9 +28,9 @@ public class OutputFormatConverter {
 	}
 
 	public String convertToDesiredOutputFormat(String jsonInput, MemberInfo memberInfo) {
-		Model model = readJsonToModel(jsonInput);
+		Model model = ModelConverter.convertStringToModel(jsonInput, Lang.JSONLD11);
 		addAdditionalStatements(memberInfo, model);
-		return writeModelToOutputFormat(model, outputFormat);
+		return ModelConverter.convertModelToString(model, outputFormat);
 
 	}
 
@@ -49,17 +47,5 @@ public class OutputFormatConverter {
 					createTypedLiteral(memberInfo.getObservedAt(),
 							TypeMapper.getInstance().getTypeByName(XMLSCHEMA_DATE_TIME))));
 		model.add(statements);
-	}
-
-	private Model readJsonToModel(String jsonInput) {
-		return RDFParserBuilder.create()
-				.fromString(jsonInput).lang(Lang.JSONLD11)
-				.toModel();
-	}
-
-	private String writeModelToOutputFormat(final Model model, final Lang lang) {
-		StringWriter stringWriter = new StringWriter();
-		RDFDataMgr.write(stringWriter, model, lang);
-		return stringWriter.toString();
 	}
 }
