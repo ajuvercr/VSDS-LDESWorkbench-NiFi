@@ -3,59 +3,112 @@
 The workbench is a customized [Apache NiFi](https://nifi.apache.org) docker image containing processors built by VSDS to allow processing of data that is intended to be ingested by an LDES server.
 
 - [Docker image](#docker-image)
-- [ModelConverter](#modelconverter)
-- [SDK configuration](#sdk-configuration)
-    - [Configurable options](#configurable-options)
-    - [Accepted RDF formats](#accepted-rdf-formats)
-- [Deployment](#deployment)
-    - [GIPOD dev](#gipod-dev)
-    - [GTFS dev](#gtfs-dev)
-    - [IoW dev](#iow-dev)
-    
-
+    - [Custom NiFi image](#custom-nifi-image)
+    - [VSDS LDES Workbench NiFi image](#vsds-ldes-workbench-nifi-image)
+- [VSDS LDES NiFi processors](#vsds-ldes-nifi-processors)
+    - [LDES Client wrappers NiFi](#ldes-client-wrappers-nifi)
+    - [NGSIv2 to NGSI-LD processor](#ngsiv2-to-ngsi-ld-processor]
+    - [NGSI-LD to LDES processor](#ngsi-ld-to-ldes-processor]
 
 ## Docker image
 
+### Custom NiFi image
 
-A docker is provided that contains a NiFi instance (based on the apache/nifi docker) and the LDES Client processor NAR files. The docker doesn't contain any workflows, these can be uploaded with a [script](./ldes-client-wrappers/ldes-client-wrappers-nifi/ldes-workbench-nifi/scripts/make.sh)
+The workbench docker image contains a customized [NiFi](https://nifi.apache.org) instance, built with JDK 17.
 
-```bash
-./make.sh nifi
+#### github
+
+A [github workflow](.github/workflows/0.build_push-docker-nifi.yml) checks if the custom NiFi image is present on github and builds it otherwise.
+
+The built customized NiFi docker image can be found [here](https://github.com/Informatievlaanderen/VSDS-LDESWorkbench-NiFi/pkgs/container/nifi)
+
+The configuration used in the github workflow can be found below. Github workflows don't allow referencing previously defined environment settings in another setting, hence the repetitions.
+
+```yaml
+REGISTRY: ghcr.io
+USERNAME: informatievlaanderen
+BASE_IMAGE_TAG: 17-slim-buster
+NIFI_VERSION: 1.17.0
+DISTRO_PATH: 1.17.0
+TARGET_IMAGE_TAG: 1.17.0-jdk17
+NIFI_IMAGE: nifi
+NIFI_DOCKER_IMAGE_NAME: ghcr.io/informatievlaanderen/nifi
+NIFI_DOCKER_IMAGE_VERSION: 1.17.0-jdk17
 ```
 
-This will upload the configured workflow to the docker.
+The generated docker image is reused as base image of the [VSDS LDES Workbench NiFi image](#vsds-ldes-workbench-nifi-image).
 
-Copy the .env.local.example to .env and change to appropriate values, in particular:
-- `NIFI_API` the URL of the workbench docker NiFi API
-- `NIFI_PROCESS_GROUP_JSON` the name of the workflow file
-- `LDES_CLIENT_SINK_URL` the URL where members should be posted
-- `LDES_SERVER_SIMULATOR_URL` the URL where fragments are fetched from
-- `NIFI_LDES_SERVER_SIMULATOR_RUN_SCHEDULE` the time to wait between different triggers of the LdesClient
+#### building locally
+
+To build the custom NiFi image locally, follow these steps:
+
+1. Fetch the official Apache NiFi image and extract it
+
+```shell
+curl -L https://github.com/apache/nifi/archive/refs/tags/rel/nifi-1.17.0.tar.gz | tar -zxv --strip-components=2 nifi-rel-nifi-1.17.0/nifi-docker/dockerhub/
+```
+
+2. Allow the dockerfile to find local context
+
+```shell
+sed -i 's/xmlstarlet procps$/xmlstarlet procps curl unzip/' dockerhub/Dockerfile
+```
+
+3. Build the docker image
+
+```shell
+docker build --build-arg IMAGE_TAG="${BASE_IMAGE_TAG}" --build-arg NIFI_VERSION="${NIFI_VERSION}" --build-arg DISTRO_PATH="${DISTRO_PATH}" -t "${NIFI_DOCKER_IMAGE_NAME}:${NIFI_DOCKER_IMAGE_VERSION}" -f dockerhub/Dockerfile dockerhub/
+```
+
+Environment variables can be taken from the github workflow and adjusted as desired.
+
+### VSDS LDES Workbench NiFi image
+
+A docker is provided that contains a NiFi instance (based on the [Custom NiFi image](#custom-nifi-image)) and the [processor NAR files](#vsds-ldes-nifi-processors). The docker doesn't contain any workflows, these can be uploaded by logging into the NiFi instance (make sure to set the proper environment variables for username and password when building) or by using the [NiFi toolkit](https://hub.docker.com/r/apache/nifi-toolkit).
+
+#### github
+
+A [github workflow](.github/workflows/1.b.pr_build-docker-workbench-nifi.yml) builds the docker image.
+
+The built customized NiFi docker image can be found [here](https://github.com/Informatievlaanderen/VSDS-LDESWorkbench-NiFi/pkgs/container/ldes-workbench-nifi)
+
+The configuration used in the github workflow can be found below.
+
+```yaml
+REGISTRY: ghcr.io
+NIFI_DOCKER_IMAGE_VERSION: 1.17.0-jdk17
+LDES_NIFI_DOCKER_IMAGE_NAME: ghcr.io/informatievlaanderen/ldes-workbench-nifi
+SINGLE_USER_CREDENTIALS_USERNAME: ${{ secrets.SINGLE_USER_CREDENTIALS_USERNAME }}
+SINGLE_USER_CREDENTIALS_PASSWORD: ${{ secrets.SINGLE_USER_CREDENTIALS_PASSWORD }}
+```
+
+Be sure to set the `SINGLE_USER_CREDENTIALS_USERNAME` and `SINGLE_USER_CREDENTIALS_PASSWORD` to allow login to the NiFi instance. When ommitted, the build will succeed, but values will be generated for you (logged to the console), making automation impossible.
+
+#### building locally
+
+```shell
+git clone git@github.com:Informatievlaanderen/VSDS-LDESWorkbench-NiFi.git
+cd VSDS-LDESWorkbench-NiFi/ldes-workbench-nifi
+docker build --build-arg NIFI_DOCKER_IMAGE_VERSION="1.17.0-jdk17" --build-arg SINGLE_USER_CREDENTIALS_USERNAME="<a username>" --build-arg SINGLE_USER_CREDENTIALS_PASSWORD="<a password>" -f Dockerfile
+```
 
 
-# LDES Client wrappers
+## VSDS LDES NiFi processors
 
-Contained here are modules that use the LDES client to replicate and synchronize an LDES.
+### LDES Client Wrappers NiFi
 
+A wrapper around the [LDES Client SDK](https://github.com/Informatievlaanderen/VSDS-LDESClient4J) that fetches LDES fragments, processes them and sends the members to an [LDES server](https://github.com/Informatievlaanderen/VSDS-LDESServer4J).
 
+Documentation is available [here](./ldes-client-wrappers-nifi/README.md).
 
+### NGSIv2 to NGSI-LD processor
 
+A processor that translates [NGSI v2](https://fiware.github.io/specifications/ngsiv2/stable/) data to [NGSI-LD](https://www.etsi.org/deliver/etsi_gr/CIM/001_099/008/01.01.01_60/gr_CIM008v010101p.pdf) data using [the protocol deliver by fiware](https://fiware-datamodels.readthedocs.io/en/stable/ngsi-ld_howto/index.html#steps-to-migrate-to-json-ld)
 
+Documentation is available [here](./ngsiv2-to-ngsi-ld-processor/README.md).
 
-# LDES Client Bundle
+### NGSI-LD to LDES processor
 
-An LDES client is an LDES component that reads and writes LDES data.
-In the client workflow, multiple steps
+A processor that adds data elements required to turn the NGSI-LD stream into an LDES stream.
 
-
-## Modules
-
-Currently there are 2 modules of interest: the LDES client and the NiFi wrapper
-* [LDES Client](./ldes-client/README.md)
-* [LDES Client wrappers](./ldes-client-wrappers/README.md)
-
-The client contains a library that fetches fragments and extracts members from them. It also has a CLI to easily fetch a stream and print the fragments to the console.
-
-The ldes-client-wrappers-nifi module is a NiFi processor that wraps around the client to take in an LDES and produce LDES members.
-
-
+Documentation is available [here](./ngsi-ld-to-ldes-processor/README.md).

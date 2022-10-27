@@ -15,8 +15,6 @@ env:
   NIFI_IMAGE: nifi
   NIFI_DOCKER_IMAGE_NAME: ghcr.io/informatievlaanderen/nifi
   NIFI_DOCKER_IMAGE_VERSION: 1.17.0-jdk17
-  SINGLE_USER_CREDENTIALS_USERNAME: ${{ secrets.SINGLE_USER_CREDENTIALS_USERNAME }}
-  SINGLE_USER_CREDENTIALS_PASSWORD: ${{ secrets.SINGLE_USER_CREDENTIALS_PASSWORD }}
 
 jobs:
   job-build-push-docker-nifi:
