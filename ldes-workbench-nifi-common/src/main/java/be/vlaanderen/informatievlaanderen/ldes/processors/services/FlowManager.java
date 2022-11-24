@@ -64,8 +64,8 @@ public class FlowManager {
 		session.transfer(flowFile, relationship);
 
 		counter++;
-		LOGGER.info("TRANSFER: sent member #{} (lang: {}) to processor {}", counter, contentType,
+		LOGGER.trace("TRANSFER: sent member #{} (lang: {}) to processor {}", counter, contentType,
 				relationship.getName());
-		LOGGER.info("TRANSFER: member data: {}", data);
+		LOGGER.trace("TRANSFER: member data: {}", data);
 	}
 }
