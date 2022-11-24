@@ -7,10 +7,16 @@ import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import be.vlaanderen.informatievlaanderen.ldes.processors.exceptions.ContentRetrievalException;
 
 public class FlowManager {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(FlowManager.class);
+
+	private static Long counter = -1L;
 
 	private FlowManager() {
 	}
@@ -56,5 +62,9 @@ public class FlowManager {
 		flowFile = session.putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), contentType);
 
 		session.transfer(flowFile, relationship);
+
+		counter++;
+
+		LOGGER.debug("TRANSFER: sent member #{} (content-type: {})", counter, contentType);
 	}
 }
