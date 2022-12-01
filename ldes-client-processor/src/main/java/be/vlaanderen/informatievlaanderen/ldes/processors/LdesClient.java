@@ -13,6 +13,8 @@ import org.apache.jena.riot.Lang;
 import org.apache.nifi.annotation.behavior.Stateful;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.annotation.lifecycle.OnAdded;
+import org.apache.nifi.annotation.lifecycle.OnRemoved;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.state.Scope;
@@ -25,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.vlaanderen.informatievlaanderen.ldes.client.LdesClientImplFactory;
+import be.vlaanderen.informatievlaanderen.ldes.client.config.LdesClientConfig;
 import be.vlaanderen.informatievlaanderen.ldes.client.converters.ModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.client.services.LdesService;
 import be.vlaanderen.informatievlaanderen.ldes.client.valueobjects.LdesFragment;
@@ -38,7 +41,9 @@ public class LdesClient extends AbstractProcessor {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(LdesClient.class);
 
-	protected LdesService ldesService = LdesClientImplFactory.getLdesService();
+	protected String identifier = null;
+	protected LdesClientConfig config = new LdesClientConfig();
+	protected LdesService ldesService;
 
 	@Override
 	public Set<Relationship> getRelationships() {
@@ -50,15 +55,24 @@ public class LdesClient extends AbstractProcessor {
 		return List.of(DATA_SOURCE_URL, DATA_SOURCE_FORMAT, DATA_DESTINATION_FORMAT, FRAGMENT_EXPIRATION_INTERVAL);
 	}
 
+	@OnAdded
+	public void onAdded() {
+		if (identifier == null) {
+			identifier = getIdentifier();
+		}
+		config.setPersistenceDbName(identifier + "-" + config.getPersistenceDbName());
+	}
+
 	@OnScheduled
 	public void onScheduled(final ProcessContext context) {
 		String dataSourceUrl = LdesProcessorProperties.getDataSourceUrl(context);
 		Lang dataSourceFormat = LdesProcessorProperties.getDataSourceFormat(context);
 		Long fragmentExpirationInterval = LdesProcessorProperties.getFragmentExpirationInterval(context);
 
+		ldesService = LdesClientImplFactory.getLdesService(config);
+
 		ldesService.setDataSourceFormat(dataSourceFormat);
 		ldesService.setFragmentExpirationInterval(fragmentExpirationInterval);
-
 		ldesService.queueFragment(dataSourceUrl);
 
 		LOGGER.info("LDES extraction processor {} with base url {} (expected LDES source format: {})",
@@ -77,5 +91,10 @@ public class LdesClient extends AbstractProcessor {
 							ModelConverter.convertModelToString(ldesMember.getMemberModel(), dataDestinationFormat),
 							DATA_RELATIONSHIP, dataDestinationFormat));
 		}
+	}
+
+	@OnRemoved
+	public void onRemoved() {
+		ldesService.getStateManager().destroyState();
 	}
 }
