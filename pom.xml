@@ -31,7 +31,7 @@
         <integrationtestskip>false</integrationtestskip>
         
         <!-- VSDS -->
-        <ldes-client.version>1.0-SNAPSHOT</ldes-client.version>
+        <ldes-client.version>1.0</ldes-client.version>
 
 		<!-- Nifi -->
 		<nifi-api.version>1.18.0</nifi-api.version>
@@ -44,9 +44,6 @@
 		<!-- Json -->
 		<jakarta.json>2.0.1</jakarta.json>
 		<jayway.version>2.7.0</jayway.version>
-
-		<!-- Logging -->
-		<slf4j.version></slf4j.version>
 
 		<!-- Testing -->
 		<nifi-mock.version>1.18.0</nifi-mock.version>
