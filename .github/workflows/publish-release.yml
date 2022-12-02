@@ -1,15 +1,9 @@
-name: 2.a Build & Deploy Project (Nar)
+name: 4.a Publish Release (Nar)
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
   workflow_dispatch:
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: Informatievlaanderen/ldes-cli
-  NIFI_DOCKER_IMAGE_VERSION: 1.17.0-jdk17
 
 jobs:
   build:
@@ -24,7 +18,8 @@ jobs:
         with:
           distribution: zulu
           java-version: 18
-      - name: Publish Nar to GitHub Packages
+
+      - name: Publish Jar to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
