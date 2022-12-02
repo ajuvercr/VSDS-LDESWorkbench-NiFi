@@ -23,7 +23,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: 1.a.pr_build-maven-packages.yml
+          workflow: build-project.yml
           workflow_conclusion: success
           path: ./ldes-workbench-nifi
           name: ldes-nar
