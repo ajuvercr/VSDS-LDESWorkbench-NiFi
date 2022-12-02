@@ -41,3 +41,14 @@ jobs:
       - name: Build (Forks) # https://portal.productboard.com/sonarsource/1-sonarcloud/c/50-sonarcloud-analyzes-external-pull-request
         if: ${{ (github.event.pull_request.head.repo.full_name != 'Informatievlaanderen/VSDS-LDESWorkbench-NiFi') && (github.ref != 'refs/heads/main')}}
         run: mvn -B verify -Dintegrationtestskip=true
+      - name: Copy generated NAR files
+          run: |
+            cp -pR ${{ github.workspace }}/ldes-client-processor/target/*.nar ${{ github.workspace }}
+            cp -pR ${{ github.workspace }}/ngsi-ld-to-ldes-processor/target/*.nar ${{ github.workspace }}
+            cp -pR ${{ github.workspace }}/ngsiv2-to-ngsi-ld-processor/target/*.nar ${{ github.workspace }}
+      - name: Upload LDES NiFi nar package
+        uses: actions/upload-artifact@v3
+        with:
+          name: ldes-nar
+          path: |
+            ${{ github.workspace }}/*.nar
