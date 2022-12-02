@@ -2,7 +2,7 @@ name: 1.b Build Docker image
 
 on:
   workflow_run:
-    workflows: [1.a.pr_build-maven-packages]
+    workflows: [build.project.yml]
     types: [completed]
   workflow_dispatch:
 
